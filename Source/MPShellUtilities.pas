@@ -1271,16 +1271,9 @@ type
  end;
 {-------------------------------------------------------------------------------}
 
-  TVirtualNameSpaceList  = class(TObjectList)
-  private
-    function GetItems(Index: NativeInt): TNamespace;
-    procedure SetItems(Index: NativeInt; ANamespace: TNamespace);
+  TVirtualNameSpaceList  = class(TObjectList<TNamespace>)
   public
-    function Add(ANamespace: TNamespace): Integer;
-    procedure FillArray(var NamespaceArray: TNamespaceArray);
-    function IndexOf(ANamespace: TNamespace): Integer;
-    procedure Insert(Index: Integer; ANamespace: TNamespace);
-    property Items[Index: NativeInt]: TNamespace read GetItems write SetItems; default;
+    procedure FillArray(var ANamespaceArray: TNamespaceArray);
   end;
 
  //
@@ -1305,19 +1298,12 @@ type
     Item: TMenuItem
   end;
 
-  TMenuItemMap = class(TList)
-  protected
-    function Get(Index: NativeInt): PMenuItemLink;
-    procedure Put(Index: NativeInt; Item: PMenuItemLink);
+  TMenuItemMap = class(TList<PMenuItemLink>)
+  strict protected
+    procedure Notify(const AItem: PMenuItemLink; AAction: TCollectionNotification); override;
   public
-    function Add: PMenuItemLink;
-    function First: PMenuItemLink;
-    function IndexOf(Item: PMenuItemLink): Integer;
-    procedure Clear; override;
-    function Insert(Index: Integer): PMenuItemLink; reintroduce;
-    function Last: PMenuItemLink;
-    function Remove(Item: PMenuItemLink): Integer;
-    property Items[Index: NativeInt]: PMenuItemLink read Get write Put; default;
+    function Add: PMenuItemLink; overload;
+    function Insert(const AIndex: NativeInt): PMenuItemLink; overload;
   end;
 
   TCommonShellContextMenu = class(TComponent, IUnknown, IShellFolder, IDropTarget)
@@ -7956,38 +7942,13 @@ end;
 
 { TVirtualNamespaceList }
 
-function TVirtualNamespaceList.Add(ANamespace: TNamespace): Integer;
-begin
-  Result := inherited Add(ANamespace);
-end;
-
-procedure TVirtualNamespaceList.FillArray(var NamespaceArray: TNamespaceArray);
+procedure TVirtualNamespaceList.FillArray(var ANamespaceArray: TNamespaceArray);
 var
-  I: Integer;
+  lCount: NativeInt;
 begin
-  SetLength(NamespaceArray, Count);
-  for I := 0 to Count - 1 do
-    NamespaceArray[0] := Items[I];
-end;
-
-function TVirtualNamespaceList.GetItems(Index: NativeInt): TNamespace;
-begin
-  Result := TNamespace(inherited Items[Index]);
-end;
-
-function  TVirtualNamespaceList.IndexOf(ANamespace: TNamespace): Integer;
-begin
-  Result := inherited IndexOf(ANamespace);
-end;
-
-procedure TVirtualNamespaceList.Insert(Index: Integer; ANamespace: TNamespace);
-begin
-  inherited Insert(Index, ANamespace);
-end;
-
-procedure TVirtualNamespaceList.SetItems(Index: NativeInt; ANamespace: TNamespace);
-begin
-  inherited Items[Index] := ANamespace;
+  SetLength(ANamespaceArray, Count);
+  for lCount := 0 to Count - 1 do
+    ANamespaceArray[0] := Items[lCount];
 end;
 
 { TCommonShellContextMenu }
@@ -9381,61 +9342,40 @@ begin
 end;
 
 { TMenuItemMap }
+
 function TMenuItemMap.Add: PMenuItemLink;
-begin
-  New(Result);
-  if Assigned(Result) then
-    inherited Insert(Count, Result)
-end;
-
-function TMenuItemMap.First: PMenuItemLink;
-begin
-  Result := PMenuItemLink( inherited First)
-end;
-
-function TMenuItemMap.Get(Index: NativeInt): PMenuItemLink;
-begin
-  Result := PMenuItemLink( inherited Get(Index))
-end;
-
-function TMenuItemMap.IndexOf(Item: PMenuItemLink): Integer;
-begin
-  Result := inherited IndexOf(Item)
-end;
-
-function TMenuItemMap.Last: PMenuItemLink;
-begin
-  Result := PMenuItemLink( inherited Last)
-end;
-
-function TMenuItemMap.Remove(Item: PMenuItemLink): Integer;
-begin
-  Result := inherited Remove(Item)
-end;
-
-procedure TMenuItemMap.Clear;
 var
-  i: Integer;
+  lLink: PMenuItemLink;
 begin
+  New(lLink);
   try
-    for i := 0 to Count - 1 do
-      Dispose(  Items[i]);
+    Add(lLink);
+    Result := lLink;
+    lLink := nil;
   finally
-    SetCount(0);
-    SetCapacity(0);
+    Dispose(lLink);
   end;
 end;
 
-function TMenuItemMap.Insert(Index: Integer): PMenuItemLink;
+function TMenuItemMap.Insert(const AIndex: NativeInt): PMenuItemLink;
+var
+  lLink: PMenuItemLink;
 begin
-  New(Result);
-  if Assigned(Result) then
-    inherited Insert(Index, Result)
+  New(lLink);
+  try
+    Insert(AIndex, lLink);
+    Result := lLink;
+    lLink := nil;
+  finally
+    Dispose(lLink);
+  end;
 end;
 
-procedure TMenuItemMap.Put(Index: NativeInt; Item: PMenuItemLink);
+procedure TMenuItemMap.Notify(const AItem: PMenuItemLink; AAction: TCollectionNotification);
 begin
-  inherited Put(Index, Item)
+  inherited Notify(AItem, AAction);
+  if AAction = TCollectionNotification.cnRemoved then
+    Dispose(AItem);
 end;
 
 { TExplorerThreadInstance }
