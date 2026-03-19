@@ -316,7 +316,7 @@ function WideExtractFileExt(Path: string; StripExtPeriod: Boolean = False): stri
 function WideExtractFileName(Path: string; BaseNameOnly: Boolean = False): string;
 function WideGetTempDir: string;
 function WideIncrementalSearch(CompareStr, Mask: string): Integer;
-function WideIsDrive(Drive: string): Boolean;
+function WideIsDrive(ADrive: string): Boolean;
 function WideIsFloppy(FileFolder: string): boolean;
 function WideIsPathDelimiter(const S: string; Index: Integer): Boolean;
 function WideNewFolderName(ParentFolder: string; SuggestedFolderName: string = ''): string;
@@ -2691,15 +2691,20 @@ begin
   Result := lstrcmpi(PWideChar(Mask), PWideChar(CompareStr));
 end;
 
-function WideIsDrive(Drive: string): Boolean;
+function WideIsDrive(ADrive: string): Boolean;
 begin
-  if Length(Drive) = 3 then
-    Result := (LowerCase(Drive[1]) >= 'a') and (LowerCase(Drive[1]) <= 'z') and (Drive[2] = ':') and (Drive[3] = '\')
+  if Length(ADrive) = 3 then
+  begin
+    ADrive := ADrive.ToLower;
+    Result := (ADrive[1] >= 'a') and (ADrive[1] <= 'z') and (ADrive[2] = ':') and (ADrive[3] = '\');
+  end
+  else if Length(ADrive) = 2 then
+  begin
+    ADrive := ADrive.ToLower;
+    Result := (ADrive[1] >= 'a') and (ADrive[1] <= 'z') and (ADrive[2] = ':');
+  end
   else
-  if Length(Drive) = 2 then
-    Result := (LowerCase(Drive[1]) >= 'a') and (LowerCase(Drive[1]) <= 'z') and (Drive[2] = ':')
-  else
-    Result := False
+    Result := False;
 end;
 
 function WideIsFloppy(FileFolder: string): boolean;
